@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+BTL_ComputerVision/output_demo.mp4
+BTL_ComputerVision/outputs/

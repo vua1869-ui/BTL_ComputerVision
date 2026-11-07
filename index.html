@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Vision Studio | YOLOv8 Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter & JetBrains Mono hiện đại, chuẩn Dashboard công nghệ -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-main: #090d16;
+            --bg-card: #111827;
+            --border-subtle: #1f2937;
+            --ocean-blue: #2563eb;
+            --ocean-light: #3b82f6;
+            --crimson-red: #f43f5e;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.06) 0px, transparent 50%);
+            color: #f1f5f9;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .font-mono-code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Card phẳng tinh tế, viền mảnh hiện đại */
+        .modern-card {
+            background-color: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Nút bấm chính tinh tế (Đỏ Crimson/Rose tự nhiên) */
+        .btn-primary-action {
+            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-primary-action:hover {
+            background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+            box-shadow: 0 6px 16px rgba(225, 29, 72, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-primary-action:active {
+            transform: translateY(0);
+        }
+
+        /* Tab chọn nguồn dữ liệu */
+        .tab-btn {
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background-color: #0b111e;
+            color: #94a3b8;
+            transition: all 0.18s ease;
+        }
+        .tab-btn:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            color: #e2e8f0;
+        }
+        .tab-btn.active {
+            background-color: rgba(37, 99, 235, 0.15);
+            border-color: #3b82f6;
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        /* Thanh trượt Range mượt mà */
+        input[type="range"] {
+            accent-color: #3b82f6;
+        }
+        input[type="range"].range-red {
+            accent-color: #f43f5e;
+        }
+
+        /* Hiệu ứng quét AI nhẹ nhàng */
+        @keyframes scanline {
+            0% { top: 0%; opacity: 0.4; }
+            50% { top: 97%; opacity: 0.85; }
+            100% { top: 0%; opacity: 0.4; }
+        }
+        .scanner-bar {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #3b82f6, #f43f5e, #3b82f6, transparent);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+            animation: scanline 2s infinite ease-in-out;
+            pointer-events: none;
+        }
+
+        /* Scrollbar gọn gàng */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #090d16; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+
+    <!-- ================= HEADER / NAVBAR ================= -->
+    <header class="border-b border-white/[0.07] bg-[#090d16]/85 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+            <!-- Logo & Tên dự án -->
+            <div class="flex items-center space-x-3.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-md shadow-blue-950/50 border border-blue-400/20">
+                    <i class="fa-solid fa-layer-group text-white text-base"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">
+                            YOLOv8 Vision Studio
+                        </h1>
+                        <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            CPU Demo
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400">Hệ thống nhận diện & phân tích thị giác máy tính thời gian thực</p>
+                </div>
+            </div>
+
+            <!-- Trạng thái hệ thống -->
+            <div class="flex items-center space-x-3 text-xs">
+                <div class="flex items-center space-x-2 bg-[#111827] px-3 py-1.5 rounded-lg border border-white/[0.07]">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                    <span class="text-slate-400">Model: <strong id="active-model-label" class="text-slate-200 font-mono-code">YOLOv8n</strong></span>
+                </div>
+                <div class="hidden md:flex items-center space-x-2 bg-[#111827] px-3 py-1.5 rounded-lg border border-white/[0.07]">
+                    <i class="fa-solid fa-microchip text-blue-400"></i>
+                    <span class="text-slate-400">Thiết bị: <strong class="text-blue-400">CPU · Ryzen 7 8845H</strong></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-6 flex-grow flex flex-col gap-6">
+
+        <!-- HÀNG 1: 4 THẺ THÔNG SỐ (METRICS CARDS) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- FPS -->
+            <div class="modern-card rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Tốc độ xử lý (FPS)</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <p id="metric-fps" class="text-2xl sm:text-3xl font-bold text-white tracking-tight">--</p>
+                        <span id="metric-ms" class="text-[11px] font-medium text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">ms/ảnh</span>
+                    </div>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <i class="fa-solid fa-gauge-high"></i>
+                </div>
+            </div>
+
+            <!-- Số lượng vật thể -->
+            <div class="modern-card rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Đối tượng phát hiện</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <p id="metric-objects" class="text-2xl sm:text-3xl font-bold text-white tracking-tight">--</p>
+                        <span class="text-[11px] font-medium text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">Khung hiện tại</span>
+                    </div>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                    <i class="fa-solid fa-crosshairs"></i>
+                </div>
+            </div>
+
+            <!-- Độ tự tin TB -->
+            <div class="modern-card rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Độ chính xác TB</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <p id="metric-conf" class="text-2xl sm:text-3xl font-bold text-white tracking-tight">--</p>
+                        <span class="text-[11px] text-slate-400">Ngưỡng: <strong id="conf-label-mini" class="text-blue-400">0.50</strong></span>
+                    </div>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+            </div>
+
+            <!-- Trạng thái Cảnh báo -->
+            <div class="modern-card rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Trạng thái hệ thống</p>
+                    <div class="flex items-center gap-2 mt-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <p id="metric-status" class="text-base sm:text-lg font-semibold text-white">Sẵn sàng</p>
+                    </div>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-slate-800 border border-white/[0.06] flex items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- HÀNG 2: BỐ CỤC CHÍNH (SIDEBAR ĐIỀU KHIỂN + 2 MÀN HÌNH XỬ LÝ) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+            
+            <!-- CỘT TRÁI (3/12): BẢNG ĐIỀU KHIỂN & CẤU HÌNH -->
+            <aside class="lg:col-span-3 modern-card rounded-xl p-5 flex flex-col justify-between">
+                <div class="space-y-5">
+                    <!-- Tiêu đề Sidebar -->
+                    <div class="flex items-center justify-between border-b border-white/[0.07] pb-3.5">
+                        <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-blue-400"></i> Cấu hình mô hình
+                        </h2>
+                        <span class="text-[11px] text-slate-400 font-mono-code">YOLOv8</span>
+                    </div>
+
+                    <!-- 1. Chọn nguồn dữ liệu -->
+                    <div>
+                        <label class="text-xs font-medium text-slate-400 block mb-2">
+                            Nguồn dữ liệu đầu vào
+                        </label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="switchMode('image')" id="tab-image" class="tab-btn active rounded-lg py-2.5 px-2 text-xs flex flex-col items-center gap-1.5">
+                                <i class="fa-regular fa-image text-sm"></i> Hình ảnh
+                            </button>
+                            <button onclick="switchMode('video')" id="tab-video" class="tab-btn rounded-lg py-2.5 px-2 text-xs flex flex-col items-center gap-1.5">
+                                <i class="fa-solid fa-film text-sm"></i> Video
+                            </button>
+                            <button onclick="switchMode('webcam')" id="tab-webcam" class="tab-btn rounded-lg py-2.5 px-2 text-xs flex flex-col items-center gap-1.5">
+                                <i class="fa-solid fa-video text-sm"></i> Camera
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Chọn Trọng số Model -->
+                    <div>
+                        <label class="text-xs font-medium text-slate-400 block mb-2">
+                            Tệp trọng số (Weights)
+                        </label>
+                        <select id="model-select" onchange="updateModelLabel()" class="w-full bg-[#0b111e] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-slate-200 font-medium focus:outline-none focus:border-blue-500 transition">
+                            <option value="YOLOv8n">YOLOv8n · v8n_best.pt</option>
+                            <option value="YOLOv8s">YOLOv8s · v8s_best.pt</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. Thanh trượt Confidence & IoU -->
+                    <div class="space-y-4 bg-[#0b111e] p-3.5 rounded-lg border border-white/[0.05]">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1.5">
+                                <span class="text-slate-300">Độ tự tin (Confidence)</span>
+                                <span id="conf-val" class="text-blue-400 font-mono-code font-semibold">0.50</span>
+                            </div>
+                            <input id="conf-slider" type="range" min="0.10" max="0.95" step="0.05" value="0.50" 
+                                class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                oninput="updateSliders()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1.5">
+                                <span class="text-slate-300">Ngưỡng chồng lấp (IoU)</span>
+                                <span id="iou-val" class="text-rose-400 font-mono-code font-semibold">0.45</span>
+                            </div>
+                            <input id="iou-slider" type="range" min="0.10" max="0.95" step="0.05" value="0.45" 
+                                class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer range-red"
+                                oninput="updateSliders()">
+                        </div>
+                    </div>
+
+                    <!-- 4. Tùy chọn hiển thị -->
+                    <div class="space-y-2.5 text-xs">
+                        <label class="text-xs font-medium text-slate-400 block">
+                            Hiển thị lớp phủ (Overlay)
+                        </label>
+                        <label class="flex items-center space-x-2.5 cursor-pointer text-slate-300 hover:text-white">
+                            <input type="checkbox" id="chk-box" checked onchange="drawSimulatedDetections()" class="w-4 h-4 accent-blue-500 rounded">
+                            <span>Vẽ khung giới hạn (Bounding Box)</span>
+                        </label>
+                        <label class="flex items-center space-x-2.5 cursor-pointer text-slate-300 hover:text-white">
+                            <input type="checkbox" id="chk-label" checked onchange="drawSimulatedDetections()" class="w-4 h-4 accent-rose-500 rounded">
+                            <span>Hiển thị tên lớp & độ tin cậy</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Nút hành động chính -->
+                <div class="pt-5 border-t border-white/[0.07] mt-5 space-y-2">
+                    <button onclick="runDetection()" class="btn-primary-action w-full py-2.5 rounded-lg font-semibold text-xs sm:text-sm text-white flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play text-xs"></i> Phân tích dữ liệu
+                    </button>
+                    <button onclick="resetSystem()" class="w-full py-2 rounded-lg bg-[#0b111e] hover:bg-slate-800/80 border border-white/[0.06] text-xs text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-rotate-right"></i> Đặt lại thông số
+                    </button>
+                </div>
+            </aside>
+
+            <!-- KHU VỰC PHẢI (9/12): CHIA 2 MÀN HÌNH ĐẦU VÀO & KẾT QUẢ + BẢNG LOG -->
+            <section class="lg:col-span-9 flex flex-col gap-6">
+                
+                <!-- 2 Khung hiển thị song song -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- KHUNG 1: DỮ LIỆU ĐẦU VÀO -->
+                    <div class="modern-card rounded-xl p-4 flex flex-col justify-between">
+                        <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.07]">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                <h3 class="text-xs sm:text-sm font-semibold text-slate-200">Dữ liệu gốc (Input)</h3>
+                            </div>
+                            <label for="file-upload" class="cursor-pointer text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/25 px-3 py-1 rounded-md font-medium transition">
+                                <i class="fa-solid fa-upload mr-1"></i> Tải tệp lên
+                            </label>
+                            <input id="file-upload" type="file" accept="image/*,video/*" class="hidden" onchange="handleFileUpload(event)">
+                        </div>
+
+                        <!-- Vùng hiển thị Ảnh/Video gốc -->
+                        <div id="input-dropzone" class="relative w-full h-72 sm:h-80 bg-[#090d16] border border-white/[0.07] rounded-lg flex flex-col items-center justify-center overflow-hidden">
+                            <img id="source-image" src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=900&q=80" 
+                                 crossorigin="anonymous"
+                                 class="w-full h-full object-cover" alt="Input Preview">
+                            
+                            <div class="absolute bottom-2.5 right-2.5 bg-slate-900/85 backdrop-blur-md px-2.5 py-1 rounded-md text-[11px] text-slate-300 border border-white/10">
+                                <i class="fa-regular fa-image text-blue-400 mr-1"></i> Ảnh mẫu (Nhấn "Tải tệp lên" để đổi)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KHUNG 2: KẾT QUẢ PHÂN TÍCH AI (OUTPUT) -->
+                    <div class="modern-card rounded-xl p-4 flex flex-col justify-between">
+                        <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.07]">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                <h3 class="text-xs sm:text-sm font-semibold text-slate-200">Kết quả nhận diện (AI Output)</h3>
+                            </div>
+                            <button onclick="downloadResult()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/[0.08] px-3 py-1 rounded-md font-medium transition">
+                                <i class="fa-solid fa-download mr-1 text-rose-400"></i> Lưu ảnh
+                            </button>
+                        </div>
+
+                        <!-- Canvas vẽ Bounding Box -->
+                        <div class="relative w-full h-72 sm:h-80 bg-[#090d16] border border-white/[0.07] rounded-lg flex items-center justify-center overflow-hidden">
+                            <canvas id="output-canvas" class="w-full h-full object-cover"></canvas>
+                            <div id="scanner-line" class="scanner-bar hidden"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- KHUNG DƯỚI: NHẬT KÝ PHÁT HIỆN ĐỐI TƯỢNG (DETECTION LOG TABLE) -->
+                <div class="modern-card rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-table-list text-blue-400"></i> Chi tiết đối tượng được phát hiện
+                        </h3>
+                        <span class="text-xs text-slate-400">Trích xuất thời gian thực</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="border-b border-white/[0.07] text-slate-400 bg-[#0b111e]/60">
+                                    <th class="py-2.5 px-3 font-medium">Mã ID</th>
+                                    <th class="py-2.5 px-3 font-medium">Phân lớp (Class)</th>
+                                    <th class="py-2.5 px-3 font-medium">Độ tin cậy</th>
+                                    <th class="py-2.5 px-3 font-medium">Tọa độ (x, y, w, h)</th>
+                                    <th class="py-2.5 px-3 font-medium">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detection-table-body" class="divide-y divide-white/[0.05]">
+                                <!-- Dữ liệu sẽ được JS cập nhật tự động -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Giao diện gọi API Python trong web_app.py; không dùng dữ liệu mô phỏng. -->
+    <script>
+        const canvas = document.getElementById('output-canvas');
+        const ctx = canvas.getContext('2d');
+        const scannerLine = document.getElementById('scanner-line');
+        let selectedFile = null;
+        let currentMode = 'image';
+        let resultVideoUrl = null;
+
+        function updateModelLabel() {
+            document.getElementById('active-model-label').textContent = document.getElementById('model-select').value;
+        }
+
+        function updateSliders() {
+            const conf = Number(document.getElementById('conf-slider').value);
+            const iou = Number(document.getElementById('iou-slider').value);
+            document.getElementById('conf-val').textContent = conf.toFixed(2);
+            document.getElementById('conf-label-mini').textContent = conf.toFixed(2);
+            document.getElementById('iou-val').textContent = iou.toFixed(2);
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            ['image', 'video', 'webcam'].forEach(m => document.getElementById('tab-' + m).classList.toggle('active', m === mode));
+            const labels = { image: 'Chế độ Ảnh', video: 'Chế độ Video', webcam: 'Camera chưa bật' };
+            document.getElementById('metric-status').textContent = labels[mode];
+            document.getElementById('file-upload').accept = mode === 'video' ? 'video/*' : 'image/*';
+            if (mode === 'webcam') alert('Chế độ camera trực tiếp chưa được kết nối. Hãy chọn ảnh hoặc video.');
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            selectedFile = file;
+            const isVideo = file.type.startsWith('video/');
+            currentMode = isVideo ? 'video' : 'image';
+            switchMode(currentMode);
+            const zone = document.getElementById('input-dropzone');
+            const url = URL.createObjectURL(file);
+            zone.innerHTML = isVideo
+                ? `<video id="source-video" src="${url}" controls class="w-full h-full object-contain"></video>`
+                : `<img id="source-image" src="${url}" class="w-full h-full object-contain" alt="Ảnh đầu vào">`;
+            document.getElementById('metric-status').textContent = 'Đã tải tệp · sẵn sàng phân tích';
+        }
+
+        function setBusy(busy) {
+            scannerLine.classList.toggle('hidden', !busy);
+            document.getElementById('metric-status').textContent = busy ? 'Đang xử lý...' : 'Hoàn tất';
+            document.querySelector('.btn-primary-action').disabled = busy;
+        }
+
+        async function runDetection() {
+            if (!selectedFile) { alert('Hãy tải ảnh hoặc video lên trước.'); return; }
+            if (currentMode === 'webcam') return;
+            setBusy(true);
+            const form = new FormData();
+            form.append('file', selectedFile);
+            form.append('model_name', document.getElementById('model-select').value);
+            form.append('conf', document.getElementById('conf-slider').value);
+            form.append('iou', document.getElementById('iou-slider').value);
+            try {
+                const endpoint = currentMode === 'video' ? '/api/detect/video' : '/api/detect/image';
+                const response = await fetch(endpoint, { method: 'POST', body: form });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Không xử lý được tệp.');
+                if (currentMode === 'video') renderVideoResult(data);
+                else renderImageResult(data);
+            } catch (error) {
+                document.getElementById('metric-status').textContent = 'Có lỗi';
+                alert(error.message + '\nKiểm tra server web_app.py đang chạy.');
+            } finally {
+                scannerLine.classList.add('hidden');
+                document.querySelector('.btn-primary-action').disabled = false;
+            }
+        }
+
+        function renderImageResult(data) {
+            const image = new Image();
+            image.onload = () => {
+                canvas.width = image.naturalWidth;
+                canvas.height = image.naturalHeight;
+                ctx.drawImage(image, 0, 0);
+                canvas.classList.remove('hidden');
+                const oldVideo = document.getElementById('result-video');
+                if (oldVideo) oldVideo.remove();
+            };
+            image.src = data.image;
+            const detections = data.detections;
+            document.getElementById('metric-objects').textContent = String(detections.length).padStart(2, '0');
+            document.getElementById('metric-fps').textContent = Number(data.fps).toFixed(1);
+            document.getElementById('metric-ms').textContent = Number(data.inference_ms).toFixed(1) + ' ms/ảnh';
+            const mean = detections.length ? detections.reduce((s, d) => s + d.confidence, 0) / detections.length : 0;
+            document.getElementById('metric-conf').textContent = (mean * 100).toFixed(1) + '%';
+            renderTable(detections);
+            document.getElementById('metric-status').textContent = 'Hoàn tất';
+        }
+
+        function renderVideoResult(data) {
+            canvas.classList.add('hidden');
+            let video = document.getElementById('result-video');
+            if (!video) {
+                video = document.createElement('video');
+                video.id = 'result-video';
+                video.controls = true;
+                video.className = 'absolute inset-0 w-full h-full object-contain';
+                canvas.parentElement.appendChild(video);
+            }
+            video.src = data.video_url;
+            video.load();
+            document.getElementById('metric-objects').textContent = String(data.frames);
+            document.getElementById('metric-fps').textContent = Number(data.processing_fps).toFixed(1);
+            document.getElementById('metric-ms').textContent = 'FPS xử lý';
+            document.getElementById('metric-conf').textContent = '—';
+            document.getElementById('detection-table-body').innerHTML = `<tr><td colspan="5" class="py-4 px-3 text-slate-300">Đã xử lý ${data.frames} khung hình bằng ${data.model}.</td></tr>`;
+            document.getElementById('metric-status').textContent = 'Hoàn tất';
+            resultVideoUrl = data.video_url;
+        }
+
+        function renderTable(detections) {
+            const tbody = document.getElementById('detection-table-body');
+            tbody.innerHTML = '';
+            detections.forEach((d, index) => {
+                const [x1, y1, x2, y2] = d.xyxy.map(Math.round);
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-white/[0.02] transition';
+                row.innerHTML = `<td class="py-2.5 px-3 font-mono-code text-xs text-slate-400">${String(index + 1).padStart(2, '0')}</td><td class="py-2.5 px-3 font-medium text-slate-200">${d.label}</td><td class="py-2.5 px-3 font-mono-code text-blue-400 font-medium">${(d.confidence * 100).toFixed(1)}%</td><td class="py-2.5 px-3 text-xs text-slate-400 font-mono-code">[${x1}, ${y1}, ${x2 - x1}, ${y2 - y1}]</td><td class="py-2.5 px-3"><span class="px-2 py-0.5 text-xs rounded-md border bg-blue-500/10 text-blue-400 border-blue-500/20">Đã phát hiện</span></td>`;
+                tbody.appendChild(row);
+            });
+            if (!detections.length) tbody.innerHTML = '<tr><td colspan="5" class="py-4 px-3 text-slate-400">Không phát hiện đối tượng ở ngưỡng hiện tại.</td></tr>';
+        }
+
+        function drawSimulatedDetections() { /* detection now comes from the Python API */ }
+        function resetSystem() {
+            document.getElementById('conf-slider').value = 0.25;
+            document.getElementById('iou-slider').value = 0.45;
+            updateSliders();
+        }
+        function downloadResult() {
+            if (currentMode === 'video' && resultVideoUrl) {
+                const a = document.createElement('a'); a.href = resultVideoUrl; a.download = 'yolo_result.webm'; a.click(); return;
+            }
+            if (!canvas.width || !canvas.height) { alert('Chưa có kết quả để lưu.'); return; }
+            const a = document.createElement('a'); a.download = 'yolo_result.png'; a.href = canvas.toDataURL('image/png'); a.click();
+        }
+        window.addEventListener('load', async () => {
+            updateSliders(); updateModelLabel();
+            try {
+                const r = await fetch('/api/health'); const d = await r.json();
+                const select = document.getElementById('model-select');
+                [...select.options].forEach(o => { o.disabled = !d.models.includes(o.value); });
+                if (!d.models.length) document.getElementById('metric-status').textContent = 'Thiếu file weights';
+            } catch (_) { document.getElementById('metric-status').textContent = 'Mất kết nối server'; }
+        });
+    </script>
+</body>
+</html>
