@@ -393,6 +393,9 @@
         let selectedFile = null;
         let currentMode = 'image';
         let resultVideoUrl = null;
+        let cameraStream = null;
+        let cameraTimer = null;
+        let cameraBusy = false;
 
         function updateModelLabel() {
             document.getElementById('active-model-label').textContent = document.getElementById('model-select').value;
@@ -407,17 +410,79 @@
         }
 
         function switchMode(mode) {
+            if (currentMode === 'webcam' && mode !== 'webcam') stopCamera();
             currentMode = mode;
             ['image', 'video', 'webcam'].forEach(m => document.getElementById('tab-' + m).classList.toggle('active', m === mode));
-            const labels = { image: 'Chế độ Ảnh', video: 'Chế độ Video', webcam: 'Camera chưa bật' };
+            const labels = { image: 'Chế độ Ảnh', video: 'Chế độ Video', webcam: 'Đang mở camera...' };
             document.getElementById('metric-status').textContent = labels[mode];
             document.getElementById('file-upload').accept = mode === 'video' ? 'video/*' : 'image/*';
-            if (mode === 'webcam') alert('Chế độ camera trực tiếp chưa được kết nối. Hãy chọn ảnh hoặc video.');
+            if (mode === 'webcam') startCamera();
+        }
+
+        async function startCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                document.getElementById('metric-status').textContent = 'Trình duyệt không hỗ trợ camera';
+                alert('Camera cần trình duyệt hỗ trợ getUserMedia. Hãy mở trang qua http://127.0.0.1:7860 hoặc localhost.');
+                return;
+            }
+            try {
+                stopCamera();
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+                const zone = document.getElementById('input-dropzone');
+                zone.innerHTML = '<video id="live-camera" autoplay muted playsinline class="w-full h-full object-contain"></video><div class="absolute bottom-2.5 right-2.5 bg-slate-900/85 px-2.5 py-1 rounded-md text-[11px] text-emerald-300 border border-white/10">● Camera đang bật</div>';
+                const video = document.getElementById('live-camera');
+                video.srcObject = cameraStream;
+                await video.play();
+                document.getElementById('metric-status').textContent = 'Camera đang hoạt động';
+                cameraTimer = setInterval(captureCameraFrame, 700);
+            } catch (error) {
+                stopCamera();
+                document.getElementById('metric-status').textContent = 'Không mở được camera';
+                const reason = error.name === 'NotAllowedError' ? 'Bạn chưa cấp quyền camera cho trình duyệt.' : error.name === 'NotFoundError' ? 'Không tìm thấy camera trên thiết bị.' : error.message;
+                alert('Không mở được camera: ' + reason + '\nKiểm tra quyền camera trong trình duyệt rồi thử lại.');
+            }
+        }
+
+        function stopCamera() {
+            if (cameraTimer) { clearInterval(cameraTimer); cameraTimer = null; }
+            if (cameraStream) { cameraStream.getTracks().forEach(track => track.stop()); cameraStream = null; }
+            cameraBusy = false;
+        }
+
+        async function captureCameraFrame() {
+            const video = document.getElementById('live-camera');
+            if (!video || video.readyState < 2 || cameraBusy) return;
+            cameraBusy = true;
+            try {
+                const capture = document.createElement('canvas');
+                const scale = Math.min(1, 640 / video.videoWidth);
+                capture.width = Math.max(1, Math.round(video.videoWidth * scale));
+                capture.height = Math.max(1, Math.round(video.videoHeight * scale));
+                capture.getContext('2d').drawImage(video, 0, 0, capture.width, capture.height);
+                const blob = await new Promise(resolve => capture.toBlob(resolve, 'image/jpeg', 0.82));
+                if (!blob) return;
+                const form = new FormData();
+                form.append('file', blob, 'camera.jpg');
+                form.append('model_name', document.getElementById('model-select').value);
+                form.append('conf', document.getElementById('conf-slider').value);
+                form.append('iou', document.getElementById('iou-slider').value);
+                const response = await fetch('/api/detect/image', { method: 'POST', body: form });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Lỗi suy luận camera.');
+                renderImageResult(data);
+                document.getElementById('metric-status').textContent = 'Camera đang hoạt động';
+            } catch (error) {
+                document.getElementById('metric-status').textContent = 'Lỗi xử lý camera';
+                console.error(error);
+            } finally {
+                cameraBusy = false;
+            }
         }
 
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+            if (cameraStream) stopCamera();
             selectedFile = file;
             const isVideo = file.type.startsWith('video/');
             currentMode = isVideo ? 'video' : 'image';
@@ -437,8 +502,8 @@
         }
 
         async function runDetection() {
+            if (currentMode === 'webcam') { if (!cameraStream) startCamera(); return; }
             if (!selectedFile) { alert('Hãy tải ảnh hoặc video lên trước.'); return; }
-            if (currentMode === 'webcam') return;
             setBusy(true);
             const form = new FormData();
             form.append('file', selectedFile);
@@ -538,6 +603,7 @@
                 if (!d.models.length) document.getElementById('metric-status').textContent = 'Thiếu file weights';
             } catch (_) { document.getElementById('metric-status').textContent = 'Mất kết nối server'; }
         });
+        window.addEventListener('beforeunload', stopCamera);
     </script>
 </body>
 </html>
